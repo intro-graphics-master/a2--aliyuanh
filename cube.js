@@ -1,8 +1,116 @@
 
 var canvas;
 var gl;
-
+var program; 
+var cBuffer2;
+var vBuffer2;
+var cBuffer;
+var vBuffer;
+var vColor;
+var vPosition;
 var NumVertices  = 18;
+var numHexVertices = 36;
+var hexVertexPositions = [
+    vec4(1/2,0,-.5/2,1),
+    vec4(.5/2,.866/2,-.5/2,1),
+    vec4(0,0,-.1,1),
+
+    vec4(1/2,.0,-.5/2,1),
+    vec4(.5/2,-.866/2,-.5/2,1),
+    vec4(0,0,-.1,1),
+
+    vec4(.5/2,-.866/2,-.5/2,1),
+    vec4(-.5/2,-.866/2,-.5/2,1),
+    vec4(0,0,-.1,1),
+
+    vec4(-1/2,.0,-.5/2,1),
+    vec4(-.5/2,-.866/2,-.5/2,1),
+    vec4(0,0,-.1,1),
+
+    vec4(-1/2,.0,-.5/2,1),
+    vec4(-.5/2,.866/2,-.5/2,1),
+    vec4(0,0,-.1,1),
+
+    vec4(-.5/2,.866/2,-.5/2,1),
+    vec4(.5/2,.866/2,-.5/2,1),
+    vec4(0,0,-.1,1),
+
+//this forms the bottom part of the "hexagonal diamond"
+
+
+    vec4(1/2,0,-.5/2,1),
+    vec4(.5/2,.866/2,-.5/2,1),
+    vec4(0,0,-.7,1),
+
+    vec4(1/2,.0,-.5/2,1),
+    vec4(.5/2,-.866/2,-.5/2,1),
+    vec4(0,0,-.7,1),
+
+    vec4(.5/2,-.866/2,-.5/2,1),
+    vec4(-.5/2,-.866/2,-.5/2,1),
+    vec4(0,0,-.7,1),
+ 
+    vec4(-1/2,.0,-.5/2,1),
+    vec4(-.5/2,-.866/2,-.5/2,1),
+    vec4(0,0,-.7,1),
+
+    vec4(-1/2,.0,-.5/2,1),
+    vec4(-.5/2,.866/2,-.5/2,1),
+     vec4(0,0,-.7,1),
+
+    vec4(-.5/2,.866/2,-.5/2,1),
+    vec4(.5/2,.866/2,-.5/2,1),
+    vec4(0,0,-.7,1),
+ ];
+var hexVertexColors = [
+    [1,0,0,1],
+    [0,1,0,1],
+    [0,0,1,1],
+
+    [1,1,1,1],
+    [0,1,0,1],
+    [0,0,1,1],
+
+    [1,0,0,1],
+    [0,1,.5,1],
+    [0,0,1,1],
+
+    [1,0,0,1],
+    [0,1,0,1],
+    [1,0,1,1],
+
+    [1,0,0,1],
+    [0,1,0,1],
+    [0,.5,1,1],
+
+    [1,0,0,1],
+    [.4,1,0,1],
+    [0,0,1,1],
+
+    [.1,0,0,1],
+    [0,.8,0,1],
+    [0,0,1,1],
+
+    [1,0,0,1],
+    [0,.3,0,1],
+    [0,.5,1,1],
+
+    [1,0,0,1],
+    [0,1,0,1],
+    [0,.1,1,1],
+
+    [1,0,0,1],
+    [0,.5,0,1],
+    [0,0,1,1],
+
+    [1,0,0,1],
+    [0,1,0,1],
+    [0,0,1,1],
+
+    [1,0,0,1],
+    [0,1,0,1],
+    [0,0,1,1],
+];
                                    // For each face of the cube, make two triangles of three vertices each:
 var vertexPositions = [
     vec4( -0.5, 0.5, 0.5, 1 ),
@@ -114,26 +222,33 @@ window.onload = function init()
     //
     //  Load shaders and initialize attribute buffers
     //
-    var program = initShaders( gl, "vertex-shader", "fragment-shader" );
+    program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
     
-    var cBuffer = gl.createBuffer();
+    cBuffer = gl.createBuffer();
     gl.bindBuffer( gl.ARRAY_BUFFER, cBuffer );
     gl.bufferData( gl.ARRAY_BUFFER, flatten(vertexColors), gl.STATIC_DRAW );
 
-    var vColor = gl.getAttribLocation( program, "vColor" );
+    vColor = gl.getAttribLocation( program, "vColor" );
     gl.vertexAttribPointer( vColor, 4, gl.FLOAT, false, 0, 0 );
     gl.enableVertexAttribArray( vColor );
 
-    var vBuffer = gl.createBuffer();
+    vBuffer = gl.createBuffer();
     gl.bindBuffer( gl.ARRAY_BUFFER, vBuffer );
     gl.bufferData( gl.ARRAY_BUFFER, flatten(vertexPositions), gl.STATIC_DRAW );
     
-
-    var vPosition = gl.getAttribLocation( program, "vPosition" );
+    vPosition = gl.getAttribLocation( program, "vPosition" );
     gl.vertexAttribPointer( vPosition, 4, gl.FLOAT, false, 0, 0 );
     gl.enableVertexAttribArray( vPosition );
 
+    cBuffer2 = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer2);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(hexVertexColors), gl.STATIC_DRAW);
+
+    vBuffer2 = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer2);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(hexVertexPositions), gl.STATIC_DRAW);
+    
     thetaLoc = gl.getUniformLocation(program, "theta"); 
     
     //event listeners for buttons
@@ -157,8 +272,19 @@ function render()
 
     theta[axis] += 2.0;
     gl.uniform3fv(thetaLoc, theta);
+    //draw the pyramid with a seam 
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
+    gl.vertexAttribPointer( vColor, 4, gl.FLOAT, false, 0, 0 );
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
+    gl.vertexAttribPointer( vPosition, 4, gl.FLOAT, false, 0, 0 );
+    gl.drawArrays( gl.TRIANGLES, 0, NumVertices);
 
-    gl.drawArrays( gl.TRIANGLES, 0, NumVertices );
-
+    //draw the hexagonal pyramid 
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer2);
+    gl.vertexAttribPointer( vColor, 4, gl.FLOAT, false, 0, 0 );
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer2);
+    gl.vertexAttribPointer( vPosition, 4, gl.FLOAT, false, 0, 0 );
+    gl.drawArrays( gl.LINE_STRIP, 0, numHexVertices );
+    
     requestAnimFrame( render );
 }
